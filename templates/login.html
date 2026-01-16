@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存系統登入</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #fffdf0; /* 柔和米黃色背景 */
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            border: none;
+        }
+        .login-title {
+            color: #3d3d3d;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        /* 自定義黃色按鈕 */
+        .btn-yellow-custom {
+            background-color: #ffda6a; /* 較飽和的黃色 */
+            border: none;
+            color: #3d3d3d;
+            font-weight: 600;
+            padding: 12px;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+        }
+        .btn-yellow-custom:hover {
+            background-color: #ffd13d;
+            transform: translateY(-3px); /* 互動上浮效果 */
+            box-shadow: 0 5px 15px rgba(255, 209, 61, 0.4);
+        }
+        .form-floating label {
+            color: #999;
+        }
+        .alert-custom {
+            background-color: #fff3cd;
+            border-color: #ffecb5;
+            color: #664d03;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h3 class="login-title">管理員登入</h3>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-custom fade show mb-4" role="alert">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control rounded-3" id="username" name="username" placeholder="帳號" required>
+                <label for="username">帳號</label>
+            </div>
+            <div class="form-floating mb-4">
+                <input type="password" class="form-control rounded-3" id="password" name="password" placeholder="密碼" required>
+                <label for="password">密碼</label>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-yellow-custom btn-lg">登入系統</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+{
+    "date": "2026-01-16",
+    "summary": {
+        "total_profit": 1100.0,
+        "total_sales_count": 131
+    },
+    "hourly_chart": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100,
+        31,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "item_summary": {
+        "簡單聒聒": {
+            "qty": 100,
+            "profit": 1000.0
+        },
+        "陳柏宏": {
+            "qty": 20,
+            "profit": 100.0
+        },
+        "1": {
+            "qty": 1,
+            "profit": 0.0
+        },
+        "2": {
+            "qty": 2,
+            "profit": 0.0
+        },
+        "3": {
+            "qty": 3,
+            "profit": 0.0
+        },
+        "5": {
+            "qty": 5,
+            "profit": 0.0
+        }
+    },
+    "raw_sales": [
+        {
+            "time": "14:59:48",
+            "product": "簡單聒聒",
+            "qty": 100,
+            "profit": 1000.0
+        },
+        {
+            "time": "15:02:23",
+            "product": "陳柏宏",
+            "qty": 1,
+            "profit": 5.0
+        },
+        {
+            "time": "15:02:23",
+            "product": "陳柏宏",
+            "qty": 1,
+            "profit": 5.0
+        },
+        {
+            "time": "15:02:42",
+            "product": "陳柏宏",
+            "qty": 18,
+            "profit": 90.0
+        },
+        {
+            "time": "15:08:51",
+            "product": "1",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:08:59",
+            "product": "2",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:00",
+            "product": "2",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:02",
+            "product": "3",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:02",
+            "product": "3",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:02",
+            "product": "3",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:17",
+            "product": "5",
+            "qty": 1,
+            "profit": 0.0
+        },
+        {
+            "time": "15:09:21",
+            "product": "5",
+            "qty": 4,
+            "profit": 0.0
+        }
+    ]
+}

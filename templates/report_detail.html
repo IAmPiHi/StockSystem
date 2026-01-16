@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ data.date }} 銷售總結</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #fffdf0; padding: 40px 0; }
+        .detail-card { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 40px; }
+        .table-custom thead { background: #fff3cd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="detail-card">
+            <div class="d-flex justify-content-between align-items-start mb-5">
+                <div>
+                    <h1 class="fw-bold text-dark">{{ data.date }} 每日總結</h1>
+                    <p class="text-muted">檔案存檔日期: {{ data.date }}</p>
+                </div>
+                <a href="/reports" class="btn btn-outline-secondary">返回報表清單</a>
+            </div>
+
+            <div class="row g-4 mb-5 text-center">
+                <div class="col-md-6">
+                    <div class="p-4 border rounded-3">
+                        <h6 class="text-muted">全日總售出</h6>
+                        <h2 class="fw-bold">{{ data.summary.total_sales_count }} 件</h2>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-4 border rounded-3 bg-light">
+                        <h6 class="text-muted">全日淨利潤</h6>
+                        <h2 class="fw-bold text-success">${{ data.summary.total_profit }}</h2>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="mb-4 fw-bold">每小時銷售分佈</h4>
+            <div style="height: 250px;" class="mb-5">
+                <canvas id="detailChart"></canvas>
+            </div>
+
+            <h4 class="mb-4 fw-bold">各商品獲利統計</h4>
+            <table class="table table-custom mb-5">
+                <thead>
+                    <tr><th>商品名稱</th><th>售出總數</th><th>累積利潤</th></tr>
+                </thead>
+                <tbody>
+                    {% for name, info in data.item_summary.items() %}
+                    <tr>
+                        <td>{{ name }}</td>
+                        <td>{{ info.qty }}</td>
+                        <td class="text-success fw-bold">${{ info.profit|round(2) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h4 class="mb-4 fw-bold">精確銷售流水帳 (24H)</h4>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-dark">
+                        <tr><th>時間</th><th>商品</th><th>數量</th><th>利潤</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in data.raw_sales %}
+                        <tr>
+                            <td>{{ sale.time }}</td>
+                            <td>{{ sale.product }}</td>
+                            <td>{{ sale.qty }}</td>
+                            <td>${{ sale.profit }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        new Chart(document.getElementById('detailChart'), {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                datasets: [{
+                    label: '售出數',
+                    data: {{ data.hourly_chart|tojson }},
+                    backgroundColor: '#ffda6a'
+                }]
+            }
+        });
+    </script>
+</body>
+</html>
