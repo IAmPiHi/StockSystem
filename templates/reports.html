@@ -8,11 +8,57 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #fffdf0; font-family: 'Segoe UI', Roboto, sans-serif; color: #4a4a4a; }
-        .navbar-custom { background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 1rem 0; }
-        .navbar-brand { font-weight: 700; color: #3d3d3d !important; }
-        .nav-link-custom { color: #6c757d; font-weight: 600; margin-left: 20px; text-decoration: none; transition: 0.2s; }
-        .nav-link-custom:hover, .nav-link-custom.active { color: #e0a800; }
+        body { background-color: #fffdf0; font-family: 'Segoe UI', Roboto, sans-serif; color: #4a4a4a;
+            display: flex;          /* 啟用彈性佈局 */
+            flex-direction: column; /* 由上往下排列 */ }
+        .navbar-custom { 
+            background: #fff; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* 陰影稍微加深一點點，更有層次 */
+            padding: 15px 0; /* 增加上下高度，比較大氣 */
+        }
+
+        .navbar-brand {
+            font-weight: 800; /* 字體加粗 */
+            font-size: 1.4rem;
+            color: #333 !important;
+            letter-spacing: 1px;
+        }
+
+        /* 通用導覽按鈕樣式 */
+        .nav-btn {
+            position: relative;
+            padding: 8px 20px;
+            margin-left: 8px;
+            border-radius: 50px; /* 膠囊形狀 */
+            font-weight: 600;
+            text-decoration: none;
+            color: #666;
+            transition: all 0.3s ease; /* 平滑過渡動畫 */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 儀表板與報表 - 滑鼠懸停效果 */
+        .nav-btn:not(.logout-btn):hover, 
+        .nav-btn.active {
+            background-color: #fff8e1; /* 超淡黃色背景 */
+            color: #d4a017; /* 深黃色文字 */
+            transform: translateY(-2px); /* 微微上浮 */
+        }
+
+        /* 登出按鈕特別樣式 */
+        .logout-btn {
+            color: #ff6b6b;
+            border: 2px solid transparent; /* 預留邊框位置 */
+            background-color: #fff5f5; /* 淡紅色背景 */
+        }
+
+        .logout-btn:hover {
+            background-color: #ff6b6b; /* 變實心紅 */
+            color: white !important;
+            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3); /* 紅色光暈 */
+            transform: translateY(-2px);
+        }
         
         .content-card { background: #ffffff; border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.03); padding: 30px; margin-bottom: 30px; }
         .section-title { color: #3d3d3d; font-weight: 700; margin-bottom: 25px; border-left: 5px solid #ffda6a; padding-left: 15px; }
@@ -43,6 +89,18 @@
             overflow-y: auto;  /* 垂直滾動 */
             padding-right: 5px; /* 避免內容貼到捲軸 */
         }
+        .footer-custom {
+            background-color: #fff;         /* 白色背景 */
+            border-top: 1px solid #eee;     /* 上方淡淡的線條 */
+            padding: 25px 0;                /* 上下留白 */
+            margin-top: auto;               /* 關鍵：自動把頁尾推到最下面 */
+            color: #888;                    /* 灰色文字 */
+            font-size: 0.9rem;              /* 字體稍微小一點 */
+        }
+        
+        .footer-custom i {
+            color: #ffda6a; /* 愛心圖案用你的主題黃色 */
+        }
 
         /* 美化捲軸 (Chrome, Safari, Edge) */
         .scroll-area::-webkit-scrollbar { width: 8px; }
@@ -54,11 +112,23 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="#"><i class="fas fa-chart-line me-2 text-warning"></i>報表中心</a>
-            <div class="d-flex">
-                <a class="nav-link-custom" href="/">儀表板</a>
-                <a class="nav-link-custom active" href="/reports">報表中心</a>
-                <a class="nav-link-custom text-danger" href="/logout">登出</a>
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="fas fa-boxes-stacked me-2 text-warning" style="font-size: 1.6rem;"></i>
+                庫存系統
+            </a>
+
+            <div class="d-flex align-items-center">
+                <a class="nav-btn {% if request.path == '/' %}active{% endif %}" href="/">
+                    <i class="fas fa-chart-line me-2"></i>儀表板
+                </a>
+                
+                <a class="nav-btn {% if request.path == '/reports' %}active{% endif %}" href="/reports">
+                    <i class="fas fa-file-invoice me-2"></i>報表
+                </a>
+                
+                <div style="width: 1px; height: 25px; background: #eee; margin: 0 15px;"></div> <a class="nav-btn logout-btn" href="/logout">
+                    <i class="fas fa-sign-out-alt me-2"></i>登出
+                </a>
             </div>
         </div>
     </nav>
@@ -155,6 +225,17 @@
             </div>
         </div>
     </div>
+    <footer class="footer-custom text-center">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <p class="mb-0">
+                        &copy; 2026 <strong>張家銘</strong>. All Rights Reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
