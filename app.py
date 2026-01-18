@@ -23,7 +23,6 @@ for folder in [app.config['UPLOAD_FOLDER'], app.config['RECORDS_FOLDER']]:
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
-    # 這裡的 products 關聯保持不變
     products = db.relationship('Product', backref='category', lazy=True)
 
 class Product(db.Model):
@@ -34,17 +33,15 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    
-    # [新功能] 軟刪除標記：True 代表已刪除(隱藏)，False 代表正常顯示
     is_deleted = db.Column(db.Boolean, default=False)
-    
     sales = db.relationship('Sale', backref='product', lazy=True)
 
 class Sale(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
-    profit = db.Column(db.Float, nullable=False)
+    profit = db.Column(db.Float, nullable=False)  # 淨利潤 (價差 * 數量)
+    revenue = db.Column(db.Float, default=0.0)    # [新] 總營收 (售價 * 數量)
     timestamp = db.Column(db.DateTime, default=datetime.now)
 
 class User(db.Model):
@@ -52,7 +49,7 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(50), nullable=False)
 
-# --- 報表邏輯 (保持不變) ---
+# --- 報表邏輯 ---
 def generate_json_report(target_date):
     start_of_day = datetime.combine(target_date, datetime.min.time())
     end_of_day = datetime.combine(target_date, datetime.max.time())
@@ -64,22 +61,35 @@ def generate_json_report(target_date):
     detail_list = []
     item_summary = {}
     total_profit = 0
+    total_revenue = 0
     
     for s in sales_today:
+        # 兼容舊資料 (如果 revenue 是 None)
+        rev = s.revenue if s.revenue is not None else 0
+        
         detail_list.append({
             "time": s.timestamp.strftime("%H:%M:%S"),
             "product": s.product.name,
             "qty": s.quantity,
-            "profit": round(s.profit, 2)
+            "profit": round(s.profit, 2),
+            "revenue": round(rev, 2)
         })
         total_profit += s.profit
-        if s.product.name not in item_summary: item_summary[s.product.name] = {"qty": 0, "profit": 0}
+        total_revenue += rev
+        
+        if s.product.name not in item_summary: 
+            item_summary[s.product.name] = {"qty": 0, "profit": 0, "revenue": 0}
         item_summary[s.product.name]["qty"] += s.quantity
         item_summary[s.product.name]["profit"] += s.profit
+        item_summary[s.product.name]["revenue"] += rev
 
     report_data = {
         "date": target_date.strftime("%Y-%m-%d"),
-        "summary": {"total_profit": round(total_profit, 2), "total_sales_count": sum(hourly_data)},
+        "summary": {
+            "total_profit": round(total_profit, 2),
+            "total_revenue": round(total_revenue, 2),
+            "total_sales_count": sum(hourly_data)
+        },
         "hourly_chart": hourly_data,
         "item_summary": item_summary,
         "raw_sales": detail_list
@@ -100,9 +110,6 @@ def auto_save_report():
 @app.route('/')
 def dashboard():
     if not session.get('logged_in'): return redirect(url_for('login'))
-    
-    # 這裡不需要改，因為我們會在 template 裡面用 if 判斷
-    # 或者要在後端過濾也可以，但在這裡傳所有分類比較方便
     categories = Category.query.all()
     return render_template('dashboard.html', categories=categories)
 
@@ -118,7 +125,6 @@ def api_add_category():
     db.session.commit()
     return jsonify({'success': True, 'id': new_cat.id, 'name': new_cat.name})
 
-# [重點修改] 新增/復活商品邏輯
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name'].strip()
@@ -129,28 +135,18 @@ def add_product():
     category_id = request.form.get('category_id')
     file = request.files.get('image')
 
-    # 搜尋是否已經有這個商品（不管是顯示中還是已刪除）
     existing_prod = Product.query.filter_by(name=name).first()
 
     if existing_prod:
-        # --- 情況 A：商品已存在 (無論是否被刪除) ---
-        
-        # 1. 如果它是「已刪除」狀態，我們將它復活
         if existing_prod.is_deleted:
             existing_prod.is_deleted = False
             flash(f"商品「{name}」已從刪除列表中恢復！", "success")
-            # 復活時，我們通常視為重新上架，可以選擇是否保留舊庫存
-            # 根據你的需求：如果是重新初始化，我們直接加上新庫存
         
-        # 2. 更新庫存 (累加)
         existing_prod.stock += new_stock
-        
-        # 3. 更新價格與成本 (如果有填寫)
         if cost_input: existing_prod.cost = float(cost_input)
         if price_input: existing_prod.price = float(price_input)
         if category_id: existing_prod.category_id = int(category_id)
         
-        # 4. 更新圖片
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -161,7 +157,6 @@ def add_product():
             flash(f"商品「{name}」已進貨，庫存增加：{new_stock}")
             
     else:
-        # --- 情況 B：全新商品 ---
         if not cost_input or not price_input:
             flash("錯誤：新商品必須輸入成本與售價！")
             return redirect(url_for('dashboard'))
@@ -179,7 +174,7 @@ def add_product():
             image=filename, 
             stock=new_stock,
             category_id=cat_id,
-            is_deleted=False # 預設顯示
+            is_deleted=False
         )
         db.session.add(new_prod)
         db.session.commit()
@@ -187,18 +182,22 @@ def add_product():
 
     return redirect(url_for('dashboard'))
 
-# [重點修改] 刪除變為「軟刪除」
 @app.route('/delete_product/<int:prod_id>', methods=['POST'])
 def delete_product(prod_id):
     prod = Product.query.get_or_404(prod_id)
-    
-    # 這次我們不檢查銷售紀錄了，因為我們只是隱藏它，不會破壞資料庫
-    # 執行軟刪除
-    prod.is_deleted = True
-    prod.stock = 0 # 隱藏時將庫存歸零，避免影響總資產計算，下次進貨再重新加
-    
-    db.session.commit()
-    flash(f"商品「{prod.name}」已刪除。若需恢復，可以直接重新進貨該商品名稱。")
+    # 檢查是否有銷售紀錄
+    sales_count = Sale.query.filter_by(product_id=prod.id).count()
+
+    if sales_count == 0:
+        db.session.delete(prod)
+        db.session.commit()
+        flash(f"商品「{prod.name}」無銷售紀錄，已永久刪除。")
+    else:
+        prod.is_deleted = True
+        prod.stock = 0 
+        db.session.commit()
+        flash(f"商品「{prod.name}」包含歷史帳務，已移至隱藏列表 (軟刪除)。")
+
     return redirect(url_for('dashboard'))
 
 @app.route('/sell/<int:prod_id>', methods=['POST'])
@@ -211,12 +210,13 @@ def sell(prod_id):
     
     prod.stock -= qty
     profit = (prod.price - prod.cost) * qty
-    db.session.add(Sale(product_id=prod.id, quantity=qty, profit=profit))
+    revenue = prod.price * qty  # [新] 計算總營收
+    
+    db.session.add(Sale(product_id=prod.id, quantity=qty, profit=profit, revenue=revenue))
     db.session.commit()
     flash(f"售出 {qty} 件 {prod.name}")
     return redirect(url_for('dashboard'))
 
-# --- 其他路由 (Reports, Login, Init) ---
 @app.route('/manual_export')
 def manual_export():
     if not session.get('logged_in'): return redirect(url_for('login'))
@@ -228,51 +228,71 @@ def manual_export():
 def reports():
     if not session.get('logged_in'): return redirect(url_for('login'))
     
-    # --- 1. 抓取近期銷售 (保持不變) ---
+    # --- 1. 抓取近期銷售 ---
     two_days_ago = datetime.now() - timedelta(days=2)
     recent_sales = Sale.query.filter(Sale.timestamp >= two_days_ago).order_by(Sale.timestamp.desc()).all()
     
-    # --- 2. 每日利潤統計 (修改取值方式) ---
-    # 查詢結果 index 0 是日期, index 1 是總利潤
+    # --- 2. 每日統計 (利潤、數量、營收) ---
     daily_stats = db.session.query(
         func.date(Sale.timestamp).label('d'), 
-        func.sum(Sale.profit).label('t')
-    ).group_by('d').limit(7).all()
+        func.sum(Sale.profit).label('total_profit'),
+        func.sum(Sale.quantity).label('total_qty'),
+        func.sum(Sale.revenue).label('total_revenue') # [新]
+    ).group_by('d').order_by(func.date(Sale.timestamp).desc()).limit(7).all()
     
-    d_labels = []
-    d_values = []
-    for row in daily_stats:
-        # row[0] 是日期，row[1] 是金額
-        d_labels.append(str(row[0]))          
-        d_values.append(float(row[1] or 0))   
+    daily_stats = daily_stats[::-1]
+
+    d_labels = [str(row.d) for row in daily_stats]
+    d_profit = [float(row.total_profit or 0) for row in daily_stats]
+    d_qty = [int(row.total_qty or 0) for row in daily_stats]
+    d_revenue = [float(row.total_revenue or 0) for row in daily_stats] # [新]
     
-    # --- 3. 每月利潤統計 (修改取值方式) ---
-    # 查詢結果 index 0 是月份, index 1 是總利潤
+    # --- 3. 每月統計 (利潤、數量、營收) ---
     monthly_stats = db.session.query(
         func.strftime('%Y-%m', Sale.timestamp).label('m'), 
-        func.sum(Sale.profit).label('t')
+        func.sum(Sale.profit).label('total_profit'),
+        func.sum(Sale.quantity).label('total_qty'),
+        func.sum(Sale.revenue).label('total_revenue') # [新]
     ).group_by('m').order_by('m').all()
 
-    m_labels = []
-    m_values = []
-    for row in monthly_stats:
-        # row[0] 是月份，row[1] 是金額
-        m_labels.append(str(row[0]))          
-        m_values.append(float(row[1] or 0))   
+    m_labels = [str(row.m) for row in monthly_stats]
+    m_profit = [float(row.total_profit or 0) for row in monthly_stats]
+    m_qty = [int(row.total_qty or 0) for row in monthly_stats]
+    m_revenue = [float(row.total_revenue or 0) for row in monthly_stats] # [新]
+# --- 4. 每月占比 ---
+    today = date.today()
+    first_day_of_month = datetime(today.year, today.month, 1)
+
+    product_stats = db.session.query(
+        Product.name,
+        func.sum(Sale.profit).label('total_profit'),
+        func.sum(Sale.quantity).label('total_qty'),
+        func.sum(Sale.revenue).label('total_revenue')
+    ).join(Sale).filter(
+        Sale.timestamp >= first_day_of_month  # <--- 關鍵：只選大於等於本月1號的資料
+    ).group_by(Product.name).all()
+
+    p_labels = [row.name for row in product_stats]
+    p_profit = [float(row.total_profit or 0) for row in product_stats]
+    p_qty = [int(row.total_qty or 0) for row in product_stats]
+    p_revenue = [float(row.total_revenue or 0) for row in product_stats]
+
+    # --- 5. 歷史報表檔案列表 ---
     
-    # --- 4. 歷史檔案列表 ---
     history_files = []
     if os.path.exists(app.config['RECORDS_FOLDER']):
         history_files = sorted(os.listdir(app.config['RECORDS_FOLDER']), reverse=True)
 
     return render_template('reports.html', 
                            recent_sales=recent_sales, 
-                           daily_labels=d_labels, 
-                           daily_values=d_values, 
-                           monthly_labels=m_labels, 
-                           monthly_values=m_values,
-                           history_files=history_files)
+                           history_files=history_files,
+                           chart_data={
+                               "daily": {"labels": d_labels, "profit": d_profit, "qty": d_qty, "revenue": d_revenue},
+                               "monthly": {"labels": m_labels, "profit": m_profit, "qty": m_qty, "revenue": m_revenue},
+                               "product": {"labels": p_labels, "profit": p_profit, "qty": p_qty, "revenue": p_revenue}
+                           })
 
+# (其他路由保持不變...)
 @app.route('/view_report/<filename>')
 def view_report(filename):
     if not session.get('logged_in'): return redirect(url_for('login'))
@@ -298,7 +318,7 @@ def logout():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        if not User.query.first(): db.session.add(User(username='admin', password='123'))  #modify it yourself
+        if not User.query.first(): db.session.add(User(username='admin', password='123')) 
         if not Category.query.first(): db.session.add(Category(name='一般商品'))
         db.session.commit()
     scheduler.init_app(app)
